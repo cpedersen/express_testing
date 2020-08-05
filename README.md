@@ -8,12 +8,12 @@ This is an Express playground area for the Node --> Integration Testing part of 
 * npm install mocha chai supertest nodemon -D
 * touch app.js
 * edit package.json
-<code>
+<pre><code>
   "scripts": {
     "test": "mocha",
     "start": "node app.js",
     "dev": "nodemon app.js"
   },
-</code>
+</code></pre>
 * create app.js
 * npm run dev
