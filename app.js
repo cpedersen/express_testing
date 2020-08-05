@@ -1,12 +1,11 @@
 const express = require('express');
 const morgan = require('morgan');
 const app = express();
-
 app.use(morgan('common'));
 
 app.get('/', (req, res) => {
   res
-    //status(400)
+    .status(200)
     .send('Hello Express!');
 });
 
@@ -50,42 +49,113 @@ app.get('/quotient', (req, res) => {
   
     res
       .send(`${a} divided by ${b} is ${ans}`);
-  });
+});
 
-  app.get('/generate', (req, res) => {
-    // get n from the query string in the request
-    const { n } = req.query;
+app.get('/generate', (req, res) => {
+  // get n from the query string in the request
+  const { n } = req.query;
+
+  // coerce n to a numeric value
+  const num = parseInt(n);
+
+  if (isNaN(num)) {
+    return res
+      .status(400)
+      .send('Invalid request');
+}
   
-    // coerce n to a numeric value
-    const num = parseInt(n);
+  // generate array [1..n]
+  const initial =  Array(num)
+    .fill(1)
+    .map((_, i) => i + 1);
+
+  // shuffle the array
+  initial.forEach((e, i) => {
+    let ran = Math.floor(Math.random() * num);
+    let temp = initial[i];
+    initial[i] = initial[ran];
+    initial[ran] = temp;
+  })
+
+  res.json(initial);
+});
+
+function toRadians(deg) {
+  return deg * (Math.PI/180);
+}
+
+function toDegrees(rad) {
+  return rad * (180/Math.PI);
+}
+
+app.get('/midpoint', (req, res) => {
+
+  const { lat1, lon1, lat2, lon2 } = req.query;
+
+  // for brevity the validation is skipped
+
+  //convert to radians
+  const rlat1 = toRadians(lat1);
+  const rlon1 = toRadians(lon1);
+  const rlat2 = toRadians(lat2);
+  const rlon2 = toRadians(lon2);
   
-    if (isNaN(num)) {
-      return res
-       .status(400)
-       .send('Invalid request');
-    }
+  const bx = Math.cos(rlat2) * Math.cos(rlon2 - rlon1);
+  const by = Math.cos(rlat2) * Math.sin(rlon2 - rlon1);
+
+  const midLat = Math.atan2(Math.sin(rlat1) + Math.sin(rlat2), 
+                Math.sqrt( (Math.cos(rlat1) + bx) * (Math.cos(rlat1) + bx) + by * by ) );
+  const midLon = rlon1 + Math.atan2(by, Math.cos(rlat1) + bx);
   
-    // generate array [1..n]
-    const initial =  Array(num)
-      .fill(1)
-      .map((_, i) => i + 1);
+  res.json( {
+    lat: toDegrees(midLat),
+    lon: toDegrees(midLon)
+  })
+});
   
-    // shuffle the array
-    initial.forEach((e, i) => {
-      let ran = Math.floor(Math.random() * num);
-      let temp = initial[i];
-      initial[i] = initial[ran];
-      initial[ran] = temp;
-    })
   
-    res.json(initial);
-  });
+app.get('/frequency', (req, res) => {
 
+  const { s } = req.query;
 
+  if(!s) {
+    return res
+      .status(400)
+      .send('Invalid request');
+  }
+  
+  const counts = s
+    .toLowerCase()
+    .split('')
+    .reduce((acc, curr) => {
+      if(acc[curr]) {
+        acc[curr]++;
+      } else {
+        acc[curr] = 1;
+      }
+      return acc;
+    }, {});
 
-module.exports = app;
+    const unique = Object.keys(counts).length;
+    const average = s.length / unique;
+    let highest = '';
+    let highestVal = 0;
 
+    Object.keys(counts).forEach(k => {
+      if(counts[k] > highestVal) {
+        highestVal = counts[k];
+        highest = k;
+      }
+    });
 
-/*app.listen(8000, () => {
+    counts.count = unique;
+    counts.average = average;
+    counts.highest = highest;
+    res.json(counts);
+});
+  
+//module.exports = app;
+
+app.listen(8000, () => {
   console.log('Server started on PORT 8000');
-});*/
+});
